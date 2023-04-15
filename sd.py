@@ -215,6 +215,11 @@ if __name__ == '__main__':
     parser.add_argument('-W', type=int, default=512)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--steps', type=int, default=50)
+    # add arg --dir_view to generate images for every view, bool type
+    parser.add_argument('--dir_view', type=bool, default=False)
+    # add arg --dir_view_steps to specify the number of steps for each view, int type
+    parser.add_argument('--dir_view_steps', type=int, default=1)
+    
     opt = parser.parse_args()
 
     seed_everything(opt.seed)
@@ -223,11 +228,46 @@ if __name__ == '__main__':
 
     sd = StableDiffusion(device, opt.sd_version, opt.hf_key)
 
-    imgs = sd.prompt_to_img(opt.prompt, opt.negative, opt.H, opt.W, opt.steps)
+    #create list ['front', 'side', 'back', 'side', 'overhead', 'bottom']
+    #if opt.dir_view then create a tmp var to store the opt.prompt plus the view and generate an image
+    #create tmp var
+    tmp_var = None
+    # tmp seed
+    tmp_seed = opt.seed
+    if opt.dir_view:
+        # for every dir_view_steps 
+        for i in range(opt.dir_view_steps):
+            # add opt.dir_view_steps to opt.seed - 1
+            tmp_seed = opt.seed + i
+            seed_everything(tmp_seed)
+        
+            for d in ['front', 
+                      'side', 
+                      'back', 
+                      'side', 
+                      'overhead', 
+                      'bottom']:
+                    # construct dir-encoded text
+                    text = f"{opt.prompt}, {d} view"
+                    # construct negative dir-encoded text with all in list except d
+                    #negative = [f"{x} view" for x in ['front', 'left-side', 'back', 'right-side', 'overhead', 'bottom'] if x != d]
+                    #print negative and text in one line
+                    print(f" Text: {text}")
+                    # generate image
+                    imgs = sd.prompt_to_img(text, opt.negative, opt.H, opt.W, opt.steps)
+                    # visualize image
+                    #plt.imshow(imgs[0])
+                    #plt.show()
+                    # save image to C:\Users\inflo\Documents\stable-dreamfusion-workspace\dir-view-test with view and seed as name
+                    plt.imsave(f"C:\\Users\\inflo\\Documents\\stable-dreamfusion-workspace\\dir-view-test\\{tmp_seed}_{d}.png", imgs[0])
+                
+           
+    else:
+        imgs = sd.prompt_to_img(opt.prompt, opt.negative, opt.H, opt.W, opt.steps)
 
-    # visualize image
-    plt.imshow(imgs[0])
-    plt.show()
+        # visualize image
+        plt.imshow(imgs[0])
+        plt.show()
 
 
 
